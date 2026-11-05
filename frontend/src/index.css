@@ -204,3 +204,110 @@ button.secondary {
 
 .qr-overlay p { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; padding: 0 16px; }
 
+
+/* ---------- Wide screens: two columns (header + form sticky on the left, feed on the right) ---------- */
+@media (min-width: 1200px) {
+  .page { max-width: 1400px; padding: 32px 32px 48px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 2fr 3fr; /* 40% / 60% */
+    gap: 40px;
+    align-items: start;
+  }
+
+  .col-left {
+    position: sticky;
+    top: 24px;
+  }
+}
+
+/* ---------- Projector view (?present) ---------- */
+.page.present {
+  --title-size: clamp(1.5rem, 2.6vw, 2.75rem);
+  max-width: none;
+  height: 100vh;
+  padding: clamp(16px, 2vw, 40px);
+  overflow: hidden;
+}
+
+.present .layout {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: clamp(24px, 3vw, 56px);
+  height: 100%;
+}
+
+.present .col-left {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.5vh, 32px);
+  min-width: 0;
+}
+
+.present .col-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.present h1 { font-size: var(--title-size); }
+.present .logo { height: calc(var(--title-size) * 1.1); }
+.present .header-row { margin-bottom: 0; }
+
+.present-qr { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+
+.present-qr img {
+  width: clamp(360px, 30vw, 560px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.present-qr p { margin: 0; }
+
+.scan-text {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(1.4rem, 2.2vw, 2.4rem);
+  text-transform: uppercase;
+}
+
+.host-text {
+  font-size: clamp(1.4rem, 2.6vw, 2.75rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.present .feed-heading h2 { font-size: clamp(1.25rem, 1.8vw, 2rem); }
+
+.present .feed {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Cards shrink a little instead of overflowing, so nothing needs scrolling */
+.present .post {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  margin-bottom: clamp(8px, 1.4vh, 16px);
+  padding: clamp(10px, 1.6vh, 20px) clamp(14px, 1.4vw, 24px);
+}
+
+.present .post-top strong { font-size: clamp(1.1rem, 1.5vw, 1.75rem); }
+.present .post .time { font-size: clamp(0.9rem, 1vw, 1.2rem); }
+.present .post p { font-size: clamp(1.25rem, 1.67vw, 2rem); line-height: 1.25; }
+
+.present .post-new { animation: flash 1s ease-out, slide-in 0.5s ease-out; }
+
+@keyframes slide-in {
+  from { transform: translateY(-40px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}

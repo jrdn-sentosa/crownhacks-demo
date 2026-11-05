@@ -16,7 +16,20 @@ function timeAgo(dateString) {
   return `${Math.floor(hours / 24)}d ago`
 }
 
+// Projector view: open the app with ?present in the URL.
+const PRESENT = new URLSearchParams(location.search).has('present')
+const PRESENT_POSTS = 6 // how many posts the projector view shows
+
+// The app's URL without ?present, so the QR code sends people to the normal page.
+function plainUrl() {
+  const url = new URL(location.href)
+  url.searchParams.delete('present')
+  url.hash = ''
+  return url.toString()
+}
+
 export default function App() {
+  const [presentQr, setPresentQr] = useState('') // QR image for the projector view
   const [posts, setPosts] = useState([])
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
@@ -74,6 +87,20 @@ export default function App() {
     return () => clearInterval(timer)
   }, [])
 
+  // Projector view: make the big QR code once, and let F toggle fullscreen.
+  useEffect(() => {
+    if (!PRESENT) return
+    QRCode.toDataURL(plainUrl(), { width: 800, margin: 1 }).then(setPresentQr)
+
+    function onKey(e) {
+      if (e.key !== 'f' && e.key !== 'F') return
+      if (document.fullscreenElement) document.exitFullscreen()
+      else document.documentElement.requestFullscreen()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   // Save a new shoutout, then reload the list.
   async function handleSubmit(event) {
     event.preventDefault() // stop the page from refreshing
@@ -99,21 +126,10 @@ export default function App() {
     setQr(await QRCode.toDataURL(window.location.href, { width: 600, margin: 2 }))
   }
 
-  return (
-    <div className="page">
-      <header>
-        <div className="header-row">
-          <div className="brand">
-            <img className="logo" src="/crown.svg" alt="" />
-            <h1>CrownHacks Shoutouts</h1>
-          </div>
-          <button type="button" className="secondary" onClick={showQr}>
-            Show QR code
-          </button>
-        </div>
-        <p className="subtitle">Deployed live at the ACM @ UNCC workshop</p>
-      </header>
+  const shownPosts = PRESENT ? posts.slice(0, PRESENT_POSTS) : posts
 
+  return (
+    <div className={`page${PRESENT ? ' present' : ''}`}>
       {/* Shown when the Supabase env vars aren't set */}
       {missingVars.length > 0 && (
         <div className="error-box">
@@ -127,60 +143,94 @@ export default function App() {
       {/* Any Supabase error shows up here */}
       {error && <div className="error-box">⚠️ {error}</div>}
 
-      <form className="card" onSubmit={handleSubmit}>
-        <label htmlFor="name">Name</label>
-        <input
-          id="name"
-          ref={nameInput}
-          type="text"
-          placeholder="Your name"
-          maxLength={32}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <label htmlFor="message">Shoutout</label>
-        <textarea
-          id="message"
-          placeholder="Your shoutout (max 140 characters)"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          maxLength={140}
-          rows={3}
-          required
-        />
-        <div className="form-row">
-          <span
-            className={`counter ${message.length >= 140 ? 'full' : message.length >= 120 ? 'warn' : ''}`}
-          >
-            {message.length}/140
-          </span>
-          <button type="submit" disabled={posting || !name.trim() || !message.trim()}>
-            {posting ? 'Posting…' : 'Post'}
-          </button>
-        </div>
-      </form>
+      <div className="layout">
+        <div className="col-left">
+          <header>
+            <div className="header-row">
+              <div className="brand">
+                <img className="logo" src="/crown.svg" alt="" />
+                <h1>CrownHacks Shoutouts</h1>
+              </div>
+              {!PRESENT && (
+                <button type="button" className="secondary" onClick={showQr}>
+                  Show QR code
+                </button>
+              )}
+            </div>
+            {!PRESENT && <p className="subtitle">Deployed live at the ACM @ UNCC workshop</p>}
+          </header>
 
-      <div className="feed-heading">
-        <h2>Shoutouts · {posts.length}</h2>
+          {PRESENT && (
+            <div className="present-qr">
+              {presentQr && <img src={presentQr} alt="QR code to open the app" />}
+              <p className="scan-text">Scan to post a shoutout</p>
+              <p className="host-text">{location.host}</p>
+            </div>
+          )}
+
+          {!PRESENT && (
+            <form className="card" onSubmit={handleSubmit}>
+              <label htmlFor="name">Name</label>
+              <input
+                id="name"
+                ref={nameInput}
+                type="text"
+                placeholder="Your name"
+                maxLength={32}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <label htmlFor="message">Shoutout</label>
+              <textarea
+                id="message"
+                placeholder="Your shoutout (max 140 characters)"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={140}
+                rows={3}
+                required
+              />
+              <div className="form-row">
+                <span
+                  className={`counter ${message.length >= 140 ? 'full' : message.length >= 120 ? 'warn' : ''}`}
+                >
+                  {message.length}/140
+                </span>
+                <button type="submit" disabled={posting || !name.trim() || !message.trim()}>
+                  {posting ? 'Posting…' : 'Post'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <div className="col-right">
+          <div className="feed-heading">
+            <h2>Shoutouts · {posts.length}</h2>
+          </div>
+
+          <section className="feed">
+            {posts.length === 0 && (
+              <p className="empty">No shoutouts yet (or Row Level Security is hiding them 👀)</p>
+            )}
+            {shownPosts.map((post) => (
+              <article
+                className={`card post${newIds.includes(post.id) ? ' post-new' : ''}`}
+                key={post.id}
+              >
+                <div className="post-top">
+                  <strong>{post.name}</strong>
+                  <span className="time">{timeAgo(post.created_at)}</span>
+                </div>
+                <p>{post.message}</p>
+              </article>
+            ))}
+          </section>
+        </div>
       </div>
 
-      <section>
-        {posts.length === 0 && (
-          <p className="empty">No shoutouts yet (or Row Level Security is hiding them 👀)</p>
-        )}
-        {posts.map((post) => (
-          <article className={`card post${newIds.includes(post.id) ? ' post-new' : ''}`} key={post.id}>
-            <div className="post-top">
-              <strong>{post.name}</strong>
-              <span className="time">{timeAgo(post.created_at)}</span>
-            </div>
-            <p>{post.message}</p>
-          </article>
-        ))}
-      </section>
-
-      {qr && (
+      {!PRESENT && qr && (
         <div className="qr-overlay" onClick={() => setQr('')}>
           <img src={qr} alt="QR code linking to this page" />
           <p>{window.location.href}</p>
@@ -188,7 +238,7 @@ export default function App() {
         </div>
       )}
 
-      {API_URL && <footer>{apiMessage}</footer>}
+      {!PRESENT && API_URL && <footer>{apiMessage}</footer>}
     </div>
   )
 }
