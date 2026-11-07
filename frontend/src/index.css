@@ -180,30 +180,6 @@ button.secondary {
 }
 
 
-/* Full-screen QR overlay for presenting */
-.qr-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--bg);
-  text-align: center;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.qr-overlay img {
-  width: min(80vmin, 600px);
-  border: 3px solid var(--ink);
-  box-shadow: 6px 6px 0 var(--ink);
-}
-
-.qr-overlay p { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; padding: 0 16px; }
-
 
 /* ---------- Wide screens: two columns (header + form sticky on the left, feed on the right) ---------- */
 @media (min-width: 1200px) {
@@ -311,3 +287,14 @@ button.secondary {
   from { transform: translateY(-40px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
+
+/* "Add to home screen" guide (phones only, see InstallGuide) */
+.install-guide {
+  background: #FFFAEE;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.install-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.install-guide ol { margin: 10px 0 0; padding-left: 22px; line-height: 1.5; }

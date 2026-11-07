@@ -13,9 +13,9 @@ alter table posts enable row level security;
 
 -- Sample rows (the SQL Editor bypasses RLS, so these insert fine)
 insert into posts (name, message) values
-  ('Ada', 'Welcome to CrownHacks! 👑'),
-  ('Grace', 'Ship it early, ship it often.'),
-  ('Linus', 'First deploy of the day!');
+  ('Jordan', 'Welcome to CrownHacks'),
+  ('Timmy', 'Statistics!'),
+  ('Nirav', 'Best of luck!');
 
 -- LIVE DEMO: run these to fix the empty list
 -- create policy "Public read" on posts for select using (true);

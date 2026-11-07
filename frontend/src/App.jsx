@@ -3,7 +3,7 @@ import QRCode from 'qrcode'
 import { supabase, missingVars } from './supabase.js'
 
 // Optional backend URL. If it's not set, the footer simply doesn't show.
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '')
 
 // Turn a timestamp into "5m ago", "2h ago", etc.
 function timeAgo(dateString) {
@@ -28,6 +28,72 @@ function plainUrl() {
   return url.toString()
 }
 
+// Which phone are we on? (iPadOS reports as a Mac, so check touch points too.)
+const IS_IOS =
+  /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+const IS_ANDROID = /android/i.test(navigator.userAgent)
+const IS_STANDALONE =
+  window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+
+// Small "add to home screen" guide for phones, with steps for iOS or Android.
+function InstallGuide() {
+  const [hidden, setHidden] = useState(() => localStorage.getItem('hideInstall') === '1')
+  const [installEvent, setInstallEvent] = useState(null) // Android Chrome's install prompt
+
+  useEffect(() => {
+    function onPrompt(e) {
+      e.preventDefault() // keep it so our button can trigger it
+      setInstallEvent(e)
+    }
+    window.addEventListener('beforeinstallprompt', onPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt)
+  }, [])
+
+  if (hidden || IS_STANDALONE || !(IS_IOS || IS_ANDROID)) return null
+
+  function dismiss() {
+    localStorage.setItem('hideInstall', '1')
+    setHidden(true)
+  }
+
+  async function install() {
+    installEvent.prompt()
+    await installEvent.userChoice
+    setInstallEvent(null)
+    dismiss()
+  }
+
+  return (
+    <div className="install-guide">
+      <div className="install-top">
+        <strong>📲 Add to your home screen</strong>
+        <button type="button" className="secondary" onClick={dismiss}>
+          Dismiss
+        </button>
+      </div>
+      {IS_IOS ? (
+        <ol>
+          <li>Tap the <b>Share</b> button (square with an arrow ⬆️)</li>
+          <li>Scroll down and tap <b>Add to Home Screen</b></li>
+          <li>Tap <b>Add</b></li>
+        </ol>
+      ) : installEvent ? (
+        <button type="button" onClick={install}>
+          Install app
+        </button>
+      ) : (
+        <ol>
+          <li>Open this page in <b>Chrome</b></li>
+          <li>Tap the <b>⋮</b> menu (top right)</li>
+          <li>Tap <b>Add to Home screen</b> (or <b>Install app</b>)</li>
+          <li>Tap <b>Install</b> / <b>Add</b></li>
+        </ol>
+      )}
+    </div>
+  )
+}
+
 export default function App() {
   const [presentQr, setPresentQr] = useState('') // QR image for the projector view
   const [posts, setPosts] = useState([])
@@ -35,7 +101,6 @@ export default function App() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('') // shown in a red box so problems are easy to see
   const [apiMessage, setApiMessage] = useState('') // response from the backend footer
-  const [qr, setQr] = useState('') // QR code image (data URL) while the overlay is open
   const [posting, setPosting] = useState(false) // true while a post is being saved
   const [newIds, setNewIds] = useState([]) // ids of posts that just appeared (briefly highlighted)
   const knownIds = useRef(null) // ids we've already seen; null until the first load finishes
@@ -121,11 +186,6 @@ export default function App() {
     loadPosts()
   }
 
-  // Show a big QR code of this page's URL so the audience can scan and test it.
-  async function showQr() {
-    setQr(await QRCode.toDataURL(window.location.href, { width: 600, margin: 2 }))
-  }
-
   const shownPosts = PRESENT ? posts.slice(0, PRESENT_POSTS) : posts
 
   return (
@@ -151,11 +211,6 @@ export default function App() {
                 <img className="logo" src="/crown.svg" alt="" />
                 <h1>CrownHacks Shoutouts</h1>
               </div>
-              {!PRESENT && (
-                <button type="button" className="secondary" onClick={showQr}>
-                  Show QR code
-                </button>
-              )}
             </div>
             {!PRESENT && <p className="subtitle">Deployed live at the ACM @ UNCC workshop</p>}
           </header>
@@ -167,6 +222,8 @@ export default function App() {
               <p className="host-text">{location.host}</p>
             </div>
           )}
+
+          {!PRESENT && <InstallGuide />}
 
           {!PRESENT && (
             <form className="card" onSubmit={handleSubmit}>
@@ -229,14 +286,6 @@ export default function App() {
           </section>
         </div>
       </div>
-
-      {!PRESENT && qr && (
-        <div className="qr-overlay" onClick={() => setQr('')}>
-          <img src={qr} alt="QR code linking to this page" />
-          <p>{window.location.href}</p>
-          <p>Scan to post a shoutout! (click anywhere to close)</p>
-        </div>
-      )}
 
       {!PRESENT && API_URL && <footer>{apiMessage}</footer>}
     </div>
